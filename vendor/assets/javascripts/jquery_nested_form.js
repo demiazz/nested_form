@@ -20,20 +20,40 @@ jQuery(function($) {
       // or for an edit form:
       // project[tasks_attributes][0][assignments_attributes][1]
       if (context) {
-        var parentNames = context.match(/[a-z_]+_attributes/g) || [];
-        var parentIds   = context.match(/(new_)?[0-9]+/g) || [];
+        // Select paramNames and paramIds
+        var parts = context.match(/([a-z_]+_attributes|(new_)?[0-9]+)/g) || [];
+        // Create empty list for parts of name
+        var parts_list = new Array();
 
-        for(var i = 0; i < parentNames.length; i++) {
-          if(parentIds[i]) {
-            content = content.replace(
-              new RegExp('(_' + parentNames[i] + ')_.+?_', 'g'),
-              '$1_' + parentIds[i] + '_');
-
-            content = content.replace(
-              new RegExp('(\\[' + parentNames[i] + '\\])\\[.+?\\]', 'g'),
-              '$1[' + parentIds[i] + ']');
+        // Determine(? bad english, sorry) a type of name's part, and add to list
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].match(/[a-z_]+_attributes/g)) {
+            parts_list.push({
+              name: true,
+              value: parts[i]
+            });
+          } else {
+            parts_list.push({
+              name: false,
+              value: parts[i]
+            });
           }
         }
+
+        // Replace paramName and paramId, only if paramName exists, and next element
+        // is paramId
+        for (var i = 0; i < parts_list.length - 1; i++) {
+          if (parts_list[i].name && parts_list[i + 1]) {
+            content = content.replace(
+              new RegExp('(_' + parts_list[i].value + ')_.+?_', 'g'),
+              '$1_' + parts_list[i + 1].value + '_');
+
+            content = content.replace(
+              new RegExp('(\\[' + parts_list[i].value + '\\])\\[.+?\\]', 'g'),
+              '$1[' + parts_list[i + 1].value + ']');
+          }
+        }
+
       }
 
       // Make a unique ID for the new child
@@ -42,6 +62,7 @@ jQuery(function($) {
       content     = content.replace(regexp, "new_" + new_id);
 
       var field = this.insertFields(content, assoc, link);
+
       $(link).closest("form")
         .trigger({ type: 'nested:fieldAdded', field: field })
         .trigger({ type: 'nested:fieldAdded:' + assoc, field: field });
